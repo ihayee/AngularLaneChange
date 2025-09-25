@@ -43,7 +43,7 @@ export function PrintRoute(route: ProcessedRouteWrapper)
 	var fileName = `${route.UserId}_Google_${route.SortedSnapshots}.csv`;
 	let currentTime = formatDate(new Date, '"MM_dd__hh_mm', 'en-US');
 
-	fileName = `${route.UserId}_${route.cutOffFrequency1}_${route.cutOffFrequency2}_${currentTime}.csv`;
+  fileName = `${route.UserId}_${route.cutOffFrequency1}_${route.cutOffFrequency2}_${currentTime}.csv`;
 
 	let allRows: string[] = [];
 	//allRows.push(`lat, long, distance, accumulated distance, raw heading, smoothed heading, calculated heading, opt calculated heading, section type mask, section type, PAH/IH, optimized PAH/IH, PAHS, optimized PAHS`);
@@ -51,7 +51,6 @@ export function PrintRoute(route: ProcessedRouteWrapper)
 	for (let index = 1; index < route.Distances.length; index++) {
 		
 		let sectionDetails = getSectionDetailsInCsvFormat(index, route.AllSections, route.SmoothedHeading);
-
 		allRows.push(`${route.Latitudes[index]}, ${route.Longitudes[index]},` +
 		`${route.Distances[index]}, ${route.AccumulativeDistances[index]},` + 
 		`${route.AverageDistances[index]}, ${route.AverageAccumulativeDistances[index]},` +
