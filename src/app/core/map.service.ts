@@ -32,6 +32,12 @@ export class MapService {
 
     //Routes
 
+    //Central Entrance 
+    let startLatLng = new google.maps.LatLng(46.822547595665796, -92.18725690695804);
+    let endLatLng = new google.maps.LatLng(46.85422367495527, -92.30110607216537);
+    //let startLatLng = new google.maps.LatLng(46.85398615807993, -92.30142318928362);
+    //let endLatLng = new google.maps.LatLng(46.82226807462855, -92.1872449105029);
+
     //I53 N
     //let startLatLng = new google.maps.LatLng(46.85298033916101, -92.28071307906917);
     //let endLatLng = new google.maps.LatLng(47.03898684749013, -92.47088988296208);
@@ -51,8 +57,8 @@ export class MapService {
     //let startLatLng = new google.maps.LatLng(46.72620607125586, -92.2205571727904);
     //let endLatLng = new google.maps.LatLng(46.69656180207156, -92.36017094038498);
     //I35N Demo Route 3
-    let startLatLng = new google.maps.LatLng(46.69630401717991, -92.36109178368429);
-    let endLatLng = new google.maps.LatLng(46.72598557013977, -92.22126772923302);
+    //let startLatLng = new google.maps.LatLng(46.69630401717991, -92.36109178368429);
+    //let endLatLng = new google.maps.LatLng(46.72598557013977, -92.22126772923302);
     //I35N Demo Route 4
     //let startLatLng = new google.maps.LatLng(46.73606181635466, -92.16814688552527);
     //let endLatLng = new google.maps.LatLng(46.80792150314588, -92.06119288309368);

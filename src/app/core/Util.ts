@@ -211,9 +211,12 @@ function drawLine(section: Section, drawLine: { lat: number; lng: number; }[], m
 
 export function OptimizeStraightSection(straightSection: Section, headings: number[], distances: number[]) {
 	// we will try to find the optimum PAH value between 0.9PAH to 1.1PAH. PAH which produces the min ALS
-	// is the optimum PAH value.
-	let headingsInSection = headings.slice(straightSection.StartIndex, straightSection.EndIndex + 1);
-	const pathAveragedHeadingMaxValue = Math.max.apply(null, headingsInSection);
+  // is the optimum PAH value.
+  let headingsInSection = headings.slice(straightSection.StartIndex, straightSection.EndIndex + 1);
+  if (straightSection.StartIndex == 0) {
+    headingsInSection = headings.slice(straightSection.StartIndex+1, straightSection.EndIndex + 1);
+  }
+  const pathAveragedHeadingMaxValue = Math.max.apply(null, headingsInSection);
 	const pathAveragedHeadingMinValue = Math.min.apply(null, headingsInSection);
 	straightSection.MaxHeadingInSection = pathAveragedHeadingMaxValue;
 	straightSection.MinHeadingInSection = pathAveragedHeadingMinValue;
@@ -242,7 +245,9 @@ export function OptimizeStraightSection(straightSection: Section, headings: numb
 		potentialPathAveragedHeading = potentialPathAveragedHeading + delataPathAveragedHeading;
 	}
 
-	// straightSection.PathAveragedHeading = currentOptimimPathAveragedHeadingValue;
+  // straightSection.PathAveragedHeading = currentOptimimPathAveragedHeadingValue;
+
+  console.log(currentOptimimPathAveragedHeadingValue + " - StraightOptimizedPathAverageHeading at Start index: " + straightSection.StartIndex + '\nMin smoothed heading: ' + pathAveragedHeadingMinValue + '\nHeading value at index 1: ' + headings[1] );
 	straightSection.OptimizedPathAveragedHeading = currentOptimimPathAveragedHeadingValue;
 }
 
@@ -336,9 +341,12 @@ export function GetStraightSections(averagedHeadings: number[],threshold: number
 
 	// now all consecutive '0' points in our helper array are straight sections.
 	for (let i = 0; i < straightSectionHelperArray.length; i++) {
-		if (straightSectionHelperArray[i] === 0) {
-			let startStraightSectionIndex = i;
-			let endStraightSectionIndex = -1;
+    if (straightSectionHelperArray[i] === 0) {
+      let startStraightSectionIndex = i;
+      if (i === 0) {
+        startStraightSectionIndex = 1;
+      }
+      let endStraightSectionIndex = -1;
 			for (let j = i; j < straightSectionHelperArray.length; j++) {
 				if (straightSectionHelperArray[j] !== 0 || j === straightSectionHelperArray.length - 1) {
 					endStraightSectionIndex = j;
@@ -370,7 +378,7 @@ export function GetAllNonStraightSections(straightSections: Section[]): Section[
 }
 
 export function CalculateAveragedDifferentialHeadings(differentialHeadings: number[]): number[] {
-	let numberOfHeadingsToAverage = 40; // 20 points ahead and 20 points behind  //Parameter to change
+	let numberOfHeadingsToAverage = 40; // # of points ahead behind  //Parameter to change
 	let averagedHeadings: number[] = Array(differentialHeadings.length).fill(0);
 
 	// We can't average start and of array on both sides so just copy over original values
@@ -411,10 +419,13 @@ function GetNextPowerOfTwoNumber(input: number): number {
 	return Math.pow(2, power);
 }
 
-export function ApplySmoothingMovingAve(input: number[]): number[] { // Smoothing algorith for actual data using Moving averages for the smoothed heading.
+export function ApplySmoothingMovingAve(input: number[]): number[] {
+  // Smoothing algorith for uploaded data using Moving averages for the smoothed heading.
+
   var smoothedData = [...input];
 
-  let dataRange = 4; // the number of data points to include for Moving average on either side of each local center point  //Parameter to change
+  //Parameter to change
+  let dataRange = 6; // the number of data points to include for Moving average on either side of each local center point  
   for (let i = dataRange + 1; i <= smoothedData.length - (dataRange + 1); i++) {
     let MovingSum = 0;
     for (let j = i - dataRange; j <= i + dataRange; j++) {

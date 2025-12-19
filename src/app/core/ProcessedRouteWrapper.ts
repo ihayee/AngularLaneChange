@@ -61,7 +61,7 @@ import { dispatch } from "rxjs/internal/observable/pairs";
     {
 			// we are looping way too many times, refactor this later.
 
-			// clean data abit (remove duplicated points etc)
+			// clean data a bit (remove duplicated points etc)
 			let sortedCompleteRoute: Snapshot[] = [];
             for (let i = 1; i < this.SortedSnapshots.length; i++)
 			{
@@ -81,7 +81,8 @@ import { dispatch } from "rxjs/internal/observable/pairs";
 
       var indexShift = 0;
       var distanceShift = 0;
-      var filterNow = false;
+      var filterStoppedDiscrepancies = true;  //This variable is used to control the filtering code meant to remove discrepancies from stopped or slow vehicle data.
+      var UseMovingAveSmoothing = true;       //This variable is used to switch between LPF and Moving Average for heading smoothing.
 			for (let index = 0; index < sortedCompleteRoute.length; index++)
 			{
 				// let index = i - 1;
@@ -98,7 +99,7 @@ import { dispatch } from "rxjs/internal/observable/pairs";
           var latitude = currentSnapshot.Latitude;
 				}
 
-        if (this.Longitudes.length >= 1) // Refactor later, basically make sure we have atleast 2 clean points before calculating rest of the data.
+        if (this.Longitudes.length >= 1) // Refactor later, basically make sure we have at least 2 clean points before calculating rest of the data.
         {
           let headingDistance = headingDistanceTo(
             { lat: this.Latitudes[index - indexShift - 1], lon: this.Longitudes[index - indexShift - 1] },
@@ -106,7 +107,8 @@ import { dispatch } from "rxjs/internal/observable/pairs";
           )
 
           if (!useGooglePoints && this.OutHeadings.length > 1) {
-            if (Math.abs(headingDistance.heading + 360 - this.OutHeadings[index - indexShift - 1]) > (3 - (distanceShift)) && headingDistance.distance - distanceShift < 1.5 && filterNow) {
+            if (Math.abs(headingDistance.heading + 360 - this.OutHeadings[index - indexShift - 1]) > (3 - (distanceShift))
+                && headingDistance.distance - distanceShift < 1.5 && filterStoppedDiscrepancies) {
               indexShift++;
               distanceShift = headingDistance.distance;
             } else {
@@ -143,7 +145,7 @@ import { dispatch } from "rxjs/internal/observable/pairs";
 				this.AverageAccumulativeDistances.push(averageDistanceBetweenPoints + this.AverageAccumulativeDistances[i - 1]);
       }
 
-      if (useGooglePoints) {
+      if (useGooglePoints || !UseMovingAveSmoothing) {
         this.SmoothedHeading = ApplySmoothingfilter(this.OutHeadings, this.cutOffFrequency1, this.cutOffFrequency2);
       } else {
         this.SmoothedHeading = ApplySmoothingMovingAve(this.OutHeadings);  //Parameter to change here
@@ -155,12 +157,13 @@ import { dispatch } from "rxjs/internal/observable/pairs";
 			}
 
 			// Now calculate differential headings array from smoothed headings
-			this.DifferentialHeadings.push(0);
-			for (let i = 1; i < this.SmoothedHeading.length; i++) {
-				this.DifferentialHeadings.push((this.SmoothedHeading[i] - this.SmoothedHeading[i - 1])/ this.Distances[i]); //Parameter to change here
+      this.DifferentialHeadings.push(0);
+      this.DifferentialHeadings.push(0);
+			for (let i = 2; i < this.SmoothedHeading.length; i++) {
+				this.DifferentialHeadings.push((this.SmoothedHeading[i] - this.SmoothedHeading[i - 1])/ this.Distances[i]);
 			}
 
-      this.AveragedDifferentialHeadings = CalculateAveragedDifferentialHeadings(this.DifferentialHeadings);
+      this.AveragedDifferentialHeadings = CalculateAveragedDifferentialHeadings(this.DifferentialHeadings); //Parameter to change here
 
       //From this point on the sections are calculated using the processed data
 			let threshold1 = 0.002;   //Parameter to change
@@ -175,7 +178,7 @@ import { dispatch } from "rxjs/internal/observable/pairs";
 			// * any spot between straight sections which is less than 50 m (parameterised) then its single straight section
 			// * if the spot between straight sections is alittle more than 50 meters then we compare the PAH of both straight
 			// sections and if its less than a threhold (0.1 m/degree) then we consider that one single straight section
-			const MinimumPointsBetweenStraightSections = 75;
+      const MinimumPointsBetweenStraightSections = 75; //Parameter to change here
 
 			let previousStraightSectionPointer = 0;
 			for (let i = 1; i < straightSections.length; i++) {
