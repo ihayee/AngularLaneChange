@@ -211,9 +211,12 @@ function drawLine(section: Section, drawLine: { lat: number; lng: number; }[], m
 
 export function OptimizeStraightSection(straightSection: Section, headings: number[], distances: number[]) {
 	// we will try to find the optimum PAH value between 0.9PAH to 1.1PAH. PAH which produces the min ALS
-	// is the optimum PAH value.
-	let headingsInSection = headings.slice(straightSection.StartIndex, straightSection.EndIndex + 1);
-	const pathAveragedHeadingMaxValue = Math.max.apply(null, headingsInSection);
+  // is the optimum PAH value.
+  let headingsInSection = headings.slice(straightSection.StartIndex, straightSection.EndIndex + 1);
+  if (straightSection.StartIndex == 0) {
+    headingsInSection = headings.slice(straightSection.StartIndex+1, straightSection.EndIndex + 1);
+  }
+  const pathAveragedHeadingMaxValue = Math.max.apply(null, headingsInSection);
 	const pathAveragedHeadingMinValue = Math.min.apply(null, headingsInSection);
 	straightSection.MaxHeadingInSection = pathAveragedHeadingMaxValue;
 	straightSection.MinHeadingInSection = pathAveragedHeadingMinValue;
@@ -242,7 +245,9 @@ export function OptimizeStraightSection(straightSection: Section, headings: numb
 		potentialPathAveragedHeading = potentialPathAveragedHeading + delataPathAveragedHeading;
 	}
 
-	// straightSection.PathAveragedHeading = currentOptimimPathAveragedHeadingValue;
+  // straightSection.PathAveragedHeading = currentOptimimPathAveragedHeadingValue;
+
+  console.log(currentOptimimPathAveragedHeadingValue + " - StraightOptimizedPathAverageHeading at Start index: " + straightSection.StartIndex + '\nMin smoothed heading: ' + pathAveragedHeadingMinValue + '\nHeading value at index 1: ' + headings[1] );
 	straightSection.OptimizedPathAveragedHeading = currentOptimimPathAveragedHeadingValue;
 }
 
@@ -336,9 +341,12 @@ export function GetStraightSections(averagedHeadings: number[],threshold: number
 
 	// now all consecutive '0' points in our helper array are straight sections.
 	for (let i = 0; i < straightSectionHelperArray.length; i++) {
-		if (straightSectionHelperArray[i] === 0) {
-			let startStraightSectionIndex = i;
-			let endStraightSectionIndex = -1;
+    if (straightSectionHelperArray[i] === 0) {
+      let startStraightSectionIndex = i;
+      if (i === 0) {
+        startStraightSectionIndex = 1;
+      }
+      let endStraightSectionIndex = -1;
 			for (let j = i; j < straightSectionHelperArray.length; j++) {
 				if (straightSectionHelperArray[j] !== 0 || j === straightSectionHelperArray.length - 1) {
 					endStraightSectionIndex = j;
@@ -370,7 +378,7 @@ export function GetAllNonStraightSections(straightSections: Section[]): Section[
 }
 
 export function CalculateAveragedDifferentialHeadings(differentialHeadings: number[]): number[] {
-	let numberOfHeadingsToAverage = 40; // 20 points ahead and 20 points behind
+	let numberOfHeadingsToAverage = 40; // # of points ahead behind  //Parameter to change
 	let averagedHeadings: number[] = Array(differentialHeadings.length).fill(0);
 
 	// We can't average start and of array on both sides so just copy over original values
@@ -409,6 +417,24 @@ export function ConvertLatLngToSnapshots(points: google.maps.LatLng[]): Snapshot
 function GetNextPowerOfTwoNumber(input: number): number {
 	let power = Math.ceil(Math.log2(input));
 	return Math.pow(2, power);
+}
+
+export function ApplySmoothingMovingAve(input: number[]): number[] {
+  // Smoothing algorith for uploaded data using Moving averages for the smoothed heading.
+
+  var smoothedData = [...input];
+
+  //Parameter to change
+  let dataRange = 6; // the number of data points to include for Moving average on either side of each local center point  
+  for (let i = dataRange + 1; i <= smoothedData.length - (dataRange + 1); i++) {
+    let MovingSum = 0;
+    for (let j = i - dataRange; j <= i + dataRange; j++) {
+      MovingSum += input[j];
+    }
+    smoothedData[i] = MovingSum / (1 + (2 * dataRange)); //Moving average
+  }
+
+  return smoothedData;
 }
 
 export function ApplySmoothingfilter(input: number[], cutOffFrequency1: number, cutOffFrequency2: number): number[] {
@@ -454,9 +480,9 @@ export function ApplySmoothingfilter(input: number[], cutOffFrequency1: number, 
 export function CalculateRectangleOfSection(section: Section)
 {
 	var width = 10;
-	let rectangle: SectionRectangle;
+  let rectangle: SectionRectangle;
 
-	if (section.SectionType === SectionType.Straight) 
+	if (section.SectionType === SectionType.Straight)
 	{
 		let headingFromStartToEndOfRectangle = normalizeHeading(headingTo( // normalizeHeading makes heading to be in 0 : 360 range
 			{lat: section.RectangleStartLatitude, lon: section.RectangleStartLongitude },
@@ -481,12 +507,14 @@ export function CalculateRectangleOfSection(section: Section)
 			EndMinLongitude: section.RectangleEndLongitude - (distanceRatio * Math.sin(headingWrtEast))
 		}
 	} else 
-	{
+  {
+    console.log('no errors yet 1\n' + section.RectangleStartLatitude + '\n' + section.RectangleStartLongitude + '\n' + section.MidLatitude + '\n' + section.MidLongitude);
 		// curve or transient section
 		let headingDistanceFromStartToMidOfRectangle = headingDistanceTo( 
 			{lat: section.RectangleStartLatitude, lon: section.RectangleStartLongitude },
 			{lat: section.MidLatitude, lon: section.MidLongitude }
-		);
+    );
+    console.log('no errors yet 2');
 
 		// we need angle wrt east so we need to add 90 degrees to the above answer
 		var headingWrtEast = normalizeHeading(headingDistanceFromStartToMidOfRectangle.heading) + 90; // normalizeHeading makes heading to be in 0 : 360 range
@@ -530,7 +558,7 @@ export function CalculateRectangleOfSection(section: Section)
 
         }
 
-	}
+  }
 
 	section.SectionRectangle = rectangle;
 }
