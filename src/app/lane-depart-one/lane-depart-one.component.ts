@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { plainToInstance } from 'class-transformer';
 import { readFileContent } from '../core/FileReader';
-import { PrintSections, PrintSnapshots } from '../core/FileSaver';
+import { PrintRoute, PrintSections, PrintSnapshots } from '../core/FileSaver';
 import { ProcessedRouteWrapper } from '../core/ProcessedRouteWrapper';
 import { Snapshot } from '../core/Snapshot';
 import { ConvertLatLngToSnapshots, drawSections } from '../core/Util';
@@ -43,7 +43,10 @@ export class LaneDepartOneComponent implements OnInit {
       throw new Error("latLong not found.")
     }
 
+    console.log(`test in download car route 1`);
     let route = new ProcessedRouteWrapper("UI_Car", "carRoute", cutOffFrequency1, cutOffFrequency2, this.CarSnapshots, false);
+    console.log(`test in download car route 2`);
     PrintSections(route);
+    PrintRoute(route);
 	}
 }

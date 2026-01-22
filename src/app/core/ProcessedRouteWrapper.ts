@@ -2,15 +2,16 @@
     /**A wrapper to keep all list of double arrays needed to generate road sections. */
 
 import { Snapshot } from "./Snapshot";
-import { ApplySmoothingfilter, AreSnapshotsOnSamePoint, CalculateAveragedDifferentialHeadings, CalculatePathAveragedDifferentialHeading, CalculatePathAveragedHeading, CalculatePathAveragedSlope, CalculatePathAveragedSlopeOfTransitionSection, CalculateRectangleOfSection, GetAllNonStraightSections, GetStraightSections, OptimizeCurveSection, OptimizeStraightSection, OptimizeTransientSection, PathAveragedDifferentialHeadingReselect } from "./Util";
+import { ApplySmoothingfilter, ApplySmoothingMovingAve, AreSnapshotsOnSamePoint, CalculateAveragedDifferentialHeadings, CalculatePathAveragedDifferentialHeading, CalculatePathAveragedHeading, CalculatePathAveragedSlope, CalculatePathAveragedSlopeOfTransitionSection, CalculateRectangleOfSection, GetAllNonStraightSections, GetStraightSections, OptimizeCurveSection, OptimizeStraightSection, OptimizeTransientSection, PathAveragedDifferentialHeadingReselect } from "./Util";
 import { headingDistanceTo } from 'geolocation-utils'
 import { Section, SectionType } from "./Section";
 import { MapService } from "./map.service";
 import { CurrencyPipe } from "@angular/common";
+import { dispatch } from "rxjs/internal/observable/pairs";
     // TODO: Clean this once we have finalized the implementation.
 
 
-    export class ProcessedRouteWrapper {
+  export class ProcessedRouteWrapper {
 		UserId: string;
 		RouteId: string;
 		SortedSnapshots: Snapshot[];
@@ -46,21 +47,21 @@ import { CurrencyPipe } from "@angular/common";
 		// AverageHeadingsNotGoogle: number[];
 		// DifferentialHeadingsNotGoogle: number[];
 
-        constructor(userId: string, routeId: string, cutOffFrequency1: number, cutOffFrequency2: number, snapshots: Snapshot[], useGooglePoints: boolean = true) {
-            this.UserId = userId;
-            this.RouteId = routeId;
+    constructor(userId: string, routeId: string, cutOffFrequency1: number, cutOffFrequency2: number, snapshots: Snapshot[], useGooglePoints: boolean = true) {
+      this.UserId = userId;
+      this.RouteId = routeId;
 			this.cutOffFrequency1 = cutOffFrequency1;
 			this.cutOffFrequency2 = cutOffFrequency2;
-            this.SortedSnapshots = snapshots;
+      this.SortedSnapshots = snapshots;
 
 			this.ProcessRoute(useGooglePoints);
-        }
+    }
 
-        ProcessRoute(useGooglePoints: boolean)
-        {
+    ProcessRoute(useGooglePoints: boolean)
+    {
 			// we are looping way too many times, refactor this later.
 
-			// clean data abit (remove duplicated points etc)
+			// clean data a bit (remove duplicated points etc)
 			let sortedCompleteRoute: Snapshot[] = [];
             for (let i = 1; i < this.SortedSnapshots.length; i++)
 			{
@@ -70,7 +71,7 @@ import { CurrencyPipe } from "@angular/common";
 				}
 
 				sortedCompleteRoute.push(this.SortedSnapshots[i]);
-			}
+      }
 
 			this.Distances.push(0);
 			this.OutHeadings.push(0);
@@ -78,6 +79,10 @@ import { CurrencyPipe } from "@angular/common";
 			this.Accuracies.push(0);
 			this.AccumulativeDistances.push(0);
 
+      var indexShift = 0;
+      var distanceShift = 0;
+      var filterStoppedDiscrepancies = true;  //This variable is used to control the filtering code meant to remove discrepancies from stopped or slow vehicle data.
+      var UseMovingAveSmoothing = true;       //This variable is used to switch between LPF and Moving Average for heading smoothing.
 			for (let index = 0; index < sortedCompleteRoute.length; index++)
 			{
 				// let index = i - 1;
@@ -85,42 +90,66 @@ import { CurrencyPipe } from "@angular/common";
 
 				if (useGooglePoints)
 				{
-					this.Longitudes.push(currentSnapshot.GoogleLongitude);
-					this.Latitudes.push(currentSnapshot.GoogleLatitude);
+					var longitude = currentSnapshot.GoogleLongitude;
+					var latitude = currentSnapshot.GoogleLatitude;
 				}
 				else
 				{
-					this.Longitudes.push(currentSnapshot.Longitude);
-					this.Latitudes.push(currentSnapshot.Latitude);
+          var longitude = currentSnapshot.Longitude;
+          var latitude = currentSnapshot.Latitude;
 				}
 
-				if (this.Longitudes.length > 1) // Refactor later, basically make sure we have atleast 2 clean points before calculating rest of the data.
-				{
-					let headingDistance = headingDistanceTo(
-						{lat: this.Latitudes[index - 1], lon: this.Longitudes[index - 1] },
-						{lat: this.Latitudes[index], lon: this.Longitudes[index]}
-					)
+        if (this.Longitudes.length >= 1) // Refactor later, basically make sure we have at least 2 clean points before calculating rest of the data.
+        {
+          let headingDistance = headingDistanceTo(
+            { lat: this.Latitudes[index - indexShift - 1], lon: this.Longitudes[index - indexShift - 1] },
+            { lat: latitude, lon: longitude }
+          )
 
-
-					//this.Distances.push(headingDistance.distance)
-					this.OutHeadings.push(headingDistance.heading + 360);
-					this.Distances.push(headingDistance.distance)
-					this.Accuracies.push(currentSnapshot.Accuracy);
-					this.AccumulativeDistances.push(headingDistance.distance + this.AccumulativeDistances[index - 1]);
-				}
+          if (!useGooglePoints && this.OutHeadings.length > 1) {
+            if (Math.abs(headingDistance.heading + 360 - this.OutHeadings[index - indexShift - 1]) > (3 - (distanceShift))
+                && headingDistance.distance - distanceShift < 1.5 && filterStoppedDiscrepancies) {
+              indexShift++;
+              distanceShift = headingDistance.distance;
+            } else {
+              distanceShift = 0;
+              this.Longitudes.push(longitude);
+              this.Latitudes.push(latitude);
+              this.OutHeadings.push(headingDistance.heading + 360);
+              this.Distances.push(headingDistance.distance)
+              this.Accuracies.push(currentSnapshot.Accuracy);
+              this.AccumulativeDistances.push(headingDistance.distance + this.AccumulativeDistances[index - indexShift - 1]);
+            }
+          } else {
+            this.Longitudes.push(longitude);
+            this.Latitudes.push(latitude);
+            this.OutHeadings.push(headingDistance.heading + 360);
+            this.Distances.push(headingDistance.distance)
+            this.Accuracies.push(currentSnapshot.Accuracy);
+            this.AccumulativeDistances.push(headingDistance.distance + this.AccumulativeDistances[index - 1]);
+          }
+        } else {
+          this.Longitudes.push(longitude);
+          this.Latitudes.push(latitude);
+        }
 			}
 
 			// We want to use averaged distance, for now we will keep the Distances array, once this decision is final
 			// we should get rid of the Distances array and use a single averageDistanceBetweenPoints variable everywhere.
 
 			const averageDistanceBetweenPoints = this.AccumulativeDistances[this.AccumulativeDistances.length - 1] / (this.AccumulativeDistances.length - 2);
-			for (let i = 0; i < this.AccumulativeDistances.length; i++) {
+      this.AverageDistances.push(averageDistanceBetweenPoints);
+      this.AverageAccumulativeDistances.push(averageDistanceBetweenPoints);
+      for (let i = 1; i < this.AccumulativeDistances.length; i++) {
 				this.AverageDistances.push(averageDistanceBetweenPoints);
-				this.AverageAccumulativeDistances.push(averageDistanceBetweenPoints + this.AccumulativeDistances[i - 1]);
-			}
-			this.Distances=this.AverageDistances;
-			this. AccumulativeDistances=this.AverageAccumulativeDistances;
-			this.SmoothedHeading = ApplySmoothingfilter(this.OutHeadings, this.cutOffFrequency1, this.cutOffFrequency2);
+				this.AverageAccumulativeDistances.push(averageDistanceBetweenPoints + this.AverageAccumulativeDistances[i - 1]);
+      }
+
+      if (useGooglePoints || !UseMovingAveSmoothing) {
+        this.SmoothedHeading = ApplySmoothingfilter(this.OutHeadings, this.cutOffFrequency1, this.cutOffFrequency2);
+      } else {
+        this.SmoothedHeading = ApplySmoothingMovingAve(this.OutHeadings);  //Parameter to change here
+      }
 
 			for (let i = 1; i < this.SmoothedHeading.length; i++) {
 				let slope = (this.SmoothedHeading[i] - this.SmoothedHeading[i - 1]) / this.Distances[i];
@@ -128,13 +157,16 @@ import { CurrencyPipe } from "@angular/common";
 			}
 
 			// Now calculate differential headings array from smoothed headings
-			this.DifferentialHeadings.push(0);
-			for (let i = 1; i < this.SmoothedHeading.length; i++) {
+      this.DifferentialHeadings.push(0);
+      this.DifferentialHeadings.push(0);
+			for (let i = 2; i < this.SmoothedHeading.length; i++) {
 				this.DifferentialHeadings.push((this.SmoothedHeading[i] - this.SmoothedHeading[i - 1])/ this.Distances[i]);
 			}
 
-			this.AveragedDifferentialHeadings = CalculateAveragedDifferentialHeadings(this.DifferentialHeadings);
-			let threshold1 = 0.002;
+      this.AveragedDifferentialHeadings = CalculateAveragedDifferentialHeadings(this.DifferentialHeadings); //Parameter to change here
+
+      //From this point on the sections are calculated using the processed data
+			let threshold1 = 0.002;   //Parameter to change
 			
 			let straightSections = GetStraightSections(this.AveragedDifferentialHeadings,threshold1);
 			
@@ -146,7 +178,7 @@ import { CurrencyPipe } from "@angular/common";
 			// * any spot between straight sections which is less than 50 m (parameterised) then its single straight section
 			// * if the spot between straight sections is alittle more than 50 meters then we compare the PAH of both straight
 			// sections and if its less than a threhold (0.1 m/degree) then we consider that one single straight section
-			const MinimumPointsBetweenStraightSections = 75;
+      const MinimumPointsBetweenStraightSections = 75; //Parameter to change here
 
 			let previousStraightSectionPointer = 0;
 			for (let i = 1; i < straightSections.length; i++) {
@@ -332,11 +364,12 @@ import { CurrencyPipe } from "@angular/common";
 
 			// create section meta data of bounding boxes.
 			this.AllSections.forEach(section => {
-				try {
-					CalculateRectangleOfSection(section);
+        try {
+          CalculateRectangleOfSection(section);
 				}
 				catch(e)
-				{
+        {
+          console.log('Here the section is undefined: \n' + e + '\n' + section.SectionType);
 					var s=10
 				}
 				

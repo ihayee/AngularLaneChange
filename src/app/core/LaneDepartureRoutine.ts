@@ -310,7 +310,8 @@ export class LaneDepartureRoutine {
 			  
 			return insideBoundingBox({latitude: latitude, longitude: longitude}, boundingBox)
 		}
-		
-		throw new Error("no bounding rectangle defined for section.");
+
+    return false;
+		//throw new Error("no bounding rectangle defined for section.");
 	}
 }

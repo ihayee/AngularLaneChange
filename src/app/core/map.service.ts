@@ -30,15 +30,50 @@ export class MapService {
 		var mark = null;
 		var latLng: google.maps.LatLng;
 
-		//Routes
+    //Routes
+
+    //Central Entrance 
+    let startLatLng = new google.maps.LatLng(46.822547595665796, -92.18725690695804);
+    let endLatLng = new google.maps.LatLng(46.85422367495527, -92.30110607216537);
+    //let startLatLng = new google.maps.LatLng(46.85398615807993, -92.30142318928362);
+    //let endLatLng = new google.maps.LatLng(46.82226807462855, -92.1872449105029);
+
+    //I53 N
+    //let startLatLng = new google.maps.LatLng(46.85298033916101, -92.28071307906917);
+    //let endLatLng = new google.maps.LatLng(47.03898684749013, -92.47088988296208);
+
+    //RLRN Demo 1
+    //let startLatLng = new google.maps.LatLng(46.82315822930357, -92.13221728643198);
+    //let endLatLng = new google.maps.LatLng(46.981362153213546, -92.15389544383854);
+
+    //RLRS Demo 2
+    //let startLatLng = new google.maps.LatLng(46.981362153213546, -92.15389544383854);
+    //let endLatLng = new google.maps.LatLng(46.82315822930357, -92.13221728643198);
+
+    //I35S Demo Route 1
+    //let startLatLng = new google.maps.LatLng(46.808515208037484, -92.06125175324284);
+    //let endLatLng = new google.maps.LatLng(46.7362810286789, -92.17224668064254);
+    //I35S Demo Route 2
+    //let startLatLng = new google.maps.LatLng(46.72620607125586, -92.2205571727904);
+    //let endLatLng = new google.maps.LatLng(46.69656180207156, -92.36017094038498);
+    //I35N Demo Route 3
+    //let startLatLng = new google.maps.LatLng(46.69630401717991, -92.36109178368429);
+    //let endLatLng = new google.maps.LatLng(46.72598557013977, -92.22126772923302);
+    //I35N Demo Route 4
+    //let startLatLng = new google.maps.LatLng(46.73606181635466, -92.16814688552527);
+    //let endLatLng = new google.maps.LatLng(46.80792150314588, -92.06119288309368);
+
+    //Normanna Rd E
+    //let startLatLng = new google.maps.LatLng(46.98145845089239, -92.15371229008176);
+    //let endLatLng = new google.maps.LatLng(46.98148093871179, -92.03459380883969);
 
 		//Route A I35 S
 		//let startLatLng = new google.maps.LatLng(46.736592, -92.190272);
 		//let endLatLng = new google.maps.LatLng(46.699693, -92.391727);
 
 		//Route B I35 N
-		let startLatLng = new google.maps.LatLng(46.698942, -92.385390);
-		let endLatLng = new google.maps.LatLng(46.737367, -92.186687);
+		//let startLatLng = new google.maps.LatLng(46.698942, -92.385390);
+		//let endLatLng = new google.maps.LatLng(46.737367, -92.186687);
 
 		//Route C Arrohead W
 		//let startLatLng = new google.maps.LatLng(46.825805, -92.073179);
@@ -134,7 +169,7 @@ export class MapService {
 			});
 		}
 
-		const drawRouteListener = () => {
+    const drawRouteListener = () => { //"Draw Route" Button Listener
 			this.calculateAndDisplayRoute(directionsService, directionsRenderer, this.map, startLatLng, endLatLng, "None");
 		};
 		document.getElementById("drawRoute")?.addEventListener(
@@ -184,7 +219,7 @@ export class MapService {
 			on2ndBtnClickHandler
 		);
 
-		const onDownloadProcessedFileHandler = () => {
+		const onDownloadProcessedFileHandler = () => { //"Download GoogleRoute RRH Files" Button Handler
 			let rawParameters = (document.getElementById("LowPassFilterParameters") as HTMLInputElement).value.split(',');
 			let cutOffFrequency1 = Number(rawParameters[0].trim());
 			let cutOffFrequency2 = Number(rawParameters[1].trim());
